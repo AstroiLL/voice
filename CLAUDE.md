@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Python project called "voice" that uses Python 3.12+ and is managed via `pyproject.toml` (PEP 621 compliant).
+Web application that receives text from external applications via HTTP and displays it in a browser-based text editor. Uses Python 3.12+ with Flask and Server-Sent Events for real-time updates.
 
 ## Development Commands
 
@@ -14,19 +14,39 @@ This is a Python project called "voice" that uses Python 3.12+ and is managed vi
 python main.py
 ```
 
+Open http://localhost:5000 in your browser.
+
 ### Installing Dependencies
 
 ```bash
-# Install dependencies from pyproject.toml
-pip install -e .
+# Using uv (recommended)
+uv pip install flask waitress
+
+# Or using pip
+pip install flask waitress
 ```
 
 ## Project Structure
 
-- `main.py` - Entry point for the application
-- `pyproject.toml` - Project configuration and dependencies
+- `main.py` - Flask application with SSE support and HTML template
+- `pyproject.toml` - Project configuration
 - `.python-version` - Specifies Python 3.12
 
-## Notes
+## API
 
-This is a newly initialized project with minimal structure. The README.md is currently empty.
+### POST /text
+
+Send text to the application. Text appears in browser in real-time via SSE.
+
+```bash
+curl -X POST http://localhost:5000/text \
+  -H "Content-Type: application/json" \
+  -d '{"text": "your text here"}'
+```
+
+## Architecture
+
+- Flask serves the web interface and API endpoints
+- Server-Sent Events (SSE) push new text to connected browsers instantly
+- Waitress serves the production WSGI server
+- HTML/CSS/JS embedded in main.py for single-file deployment
