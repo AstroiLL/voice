@@ -1,0 +1,9 @@
+[project]
+name = "voice"
+version = "0.1.0"
+description = "Simple GUI application to receive and display text from external applications"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.1.0",
+]
