@@ -6,10 +6,10 @@ Web application that receives text from external applications via HTTP and displ
 
 - Receive text via HTTP POST requests
 - Web interface accessible at http://localhost:5000
+- Real-time text updates using Server-Sent Events
+- Editable text area
 - Copy text to clipboard with one click
 - Clear text button
-- Auto-refresh to show incoming text
-- Two modes: replace existing text or append to it
 
 ## Installation
 
@@ -32,7 +32,7 @@ Open http://localhost:5000 in your browser.
 
 ### POST /text
 
-Send text to the application from any external app.
+Send text to the application from any external app. Text will appear in the browser in real-time.
 
 ```bash
 curl -X POST http://localhost:5000/text \
@@ -42,33 +42,3 @@ curl -X POST http://localhost:5000/text \
 
 **Parameters:**
 - `text` (required): The text to display
-- `mode` (optional): `"set"` (default) to replace existing text, `"append"` to add to existing text
-
-**Examples:**
-
-Replace text:
-```bash
-curl -X POST http://localhost:5000/text \
-  -H "Content-Type: application/json" \
-  -d '{"text": "New text"}'
-```
-
-Append text:
-```bash
-curl -X POST http://localhost:5000/text \
-  -H "Content-Type: application/json" \
-  -d '{"text": "\nAdditional line", "mode": "append"}'
-```
-
-### GET /text
-
-Get the current text from the application.
-
-```bash
-curl http://localhost:5000/text
-```
-
-**Response:**
-```json
-{"text": "Current text content"}
-```

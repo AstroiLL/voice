@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, Response
+import queue
 
 app = Flask(__name__)
 
 # Store current text in memory
 current_text = ""
+# Queue for SSE clients
+clients = []
 
 # HTML template for the web interface
 HTML_TEMPLATE = """
@@ -131,21 +134,14 @@ HTML_TEMPLATE = """
             status.classList.remove('received');
         }
 
-        // Poll for new text every 500ms
-        async function checkForText() {
-            try {
-                const response = await fetch('/text');
-                const data = await response.json();
-                if (data.text && data.text !== textArea.value) {
-                    textArea.value = data.text;
-                    status.textContent = `Text received (${data.text.length} chars)`;
-                    status.classList.add('received');
-                }
-            } catch (e) {}
-            setTimeout(checkForText, 500);
-        }
+        // Listen for server-sent events (new text)
+        const eventSource = new EventSource('/events');
 
-        checkForText();
+        eventSource.onmessage = function(event) {
+            textArea.value = event.data;
+            status.textContent = `Text received (${event.data.length} chars)`;
+            status.classList.add('received');
+        };
     </script>
 </body>
 </html>
@@ -158,31 +154,41 @@ def index():
     return render_template_string(HTML_TEMPLATE)
 
 
+@app.route('/events')
+def events():
+    """SSE endpoint for pushing new text to clients"""
+    def event_stream():
+        q = queue.Queue()
+        clients.append(q)
+        try:
+            while True:
+                text = q.get()
+                yield f"data: {text}\n\n"
+        except GeneratorExit:
+            clients.remove(q)
+    return Response(event_stream(), mimetype="text/event-stream")
+
+
 @app.route('/text', methods=['POST'])
 def receive_text():
     """Endpoint to receive text via HTTP POST"""
-    global current_text
+    global current_text, clients
 
     data = request.get_json()
 
     if not data or 'text' not in data:
         return jsonify({'error': 'No text provided'}), 400
 
-    text = data['text']
-    mode = data.get('mode', 'set')  # 'set' to replace, 'append' to add
+    current_text = data['text']
 
-    if mode == 'set':
-        current_text = text
-    else:
-        current_text += text
+    # Push to all connected clients
+    for client in clients[:]:
+        try:
+            client.put_nowait(current_text)
+        except:
+            clients.remove(client)
 
-    return jsonify({'status': 'success', 'length': len(text)}), 200
-
-
-@app.route('/text', methods=['GET'])
-def get_text():
-    """Endpoint to get current text via HTTP GET"""
-    return jsonify({'text': current_text}), 200
+    return jsonify({'status': 'success', 'length': len(current_text)}), 200
 
 
 def main():
