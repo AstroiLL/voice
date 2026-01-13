@@ -24,7 +24,7 @@ HTML_TEMPLATE = """
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: #1a1a2e;
+            background: #0d0d0d;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -34,69 +34,85 @@ HTML_TEMPLATE = """
         .container {
             width: 100%;
             max-width: 700px;
-            background: #16213e;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+            border: 1px solid #2a2a2a;
         }
         h1 {
-            color: #e94560;
-            font-size: 1.5rem;
-            margin-bottom: 16px;
+            color: #f5f5f5;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
         }
         .status {
-            color: #0f3460;
-            font-size: 0.9rem;
+            color: #6b7280;
+            font-size: 0.85rem;
             margin-bottom: 16px;
         }
         .status.received {
-            color: #4ade80;
+            color: #3b82f6;
         }
         textarea {
             width: 100%;
-            min-height: 200px;
-            background: #0f3460;
-            color: #e2e8f0;
-            border: 2px solid #1a1a2e;
-            border-radius: 8px;
+            min-height: 220px;
+            background: #0d0d0d;
+            color: #e5e5e5;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
             padding: 16px;
-            font-size: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
             resize: vertical;
             outline: none;
+            transition: border-color 0.15s ease;
         }
         textarea:focus {
-            border-color: #e94560;
+            border-color: #3b82f6;
+        }
+        textarea::placeholder {
+            color: #4a4a4a;
         }
         .buttons {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             margin-top: 16px;
         }
         button {
-            padding: 12px 24px;
-            font-size: 0.95rem;
+            padding: 11px 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s ease;
         }
         .copy-btn {
-            background: #e94560;
+            background: #3b82f6;
             color: white;
             flex: 1;
         }
         .copy-btn:hover {
-            background: #ff6b6b;
+            background: #2563eb;
+        }
+        .copy-btn:active {
+            transform: scale(0.98);
         }
         .copy-btn.copied {
-            background: #4ade80;
+            background: #10b981;
         }
         .clear-btn {
-            background: #0f3460;
-            color: #e2e8f0;
+            background: #2a2a2a;
+            color: #a3a3a3;
         }
         .clear-btn:hover {
-            background: #1a1a2e;
+            background: #3a3a3a;
+            color: #d4d4d4;
+        }
+        .clear-btn:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
