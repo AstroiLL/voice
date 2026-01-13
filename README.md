@@ -1,14 +1,14 @@
 # Text Receiver
 
-Simple GUI application for Linux that receives text from external applications via HTTP and displays it in an editable window.
+Web application that receives text from external applications via HTTP and displays it in a browser-based text editor.
 
 ## Features
 
 - Receive text via HTTP POST requests
-- Edit text directly in the window
+- Web interface accessible at http://localhost:5000
 - Copy text to clipboard with one click
 - Clear text button
-- Status bar showing current state
+- Auto-refresh to show incoming text
 - Two modes: replace existing text or append to it
 
 ## Installation
@@ -17,7 +17,7 @@ Simple GUI application for Linux that receives text from external applications v
 
 ```bash
 # Install dependencies
-uv pip install flask
+uv pip install flask waitress
 ```
 
 ## Running
@@ -26,13 +26,13 @@ uv pip install flask
 python main.py
 ```
 
-The application will open a small window and start an HTTP server on port 5000.
+Open http://localhost:5000 in your browser.
 
 ## API
 
 ### POST /text
 
-Send text to the application.
+Send text to the application from any external app.
 
 ```bash
 curl -X POST http://localhost:5000/text \

@@ -1,99 +1,167 @@
-import threading
-import tkinter as tk
-from tkinter import scrolledtext
-from queue import Queue
-
-# CRITICAL: Initialize Tkinter BEFORE importing Flask
-# This prevents XInitThreads conflict
-root = tk.Tk()
-root.withdraw()  # Hide initially
-
-# Now it's safe to import Flask
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# Global queue for thread communication
-text_queue = Queue()
+# Store current text in memory
+current_text = ""
+
+# HTML template for the web interface
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Receiver</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: #16213e;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #e94560;
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+        .status {
+            color: #0f3460;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+        .status.received {
+            color: #4ade80;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            background: #0f3460;
+            color: #e2e8f0;
+            border: 2px solid #1a1a2e;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 1rem;
+            resize: vertical;
+            outline: none;
+        }
+        textarea:focus {
+            border-color: #e94560;
+        }
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-btn {
+            background: #e94560;
+            color: white;
+            flex: 1;
+        }
+        .copy-btn:hover {
+            background: #ff6b6b;
+        }
+        .copy-btn.copied {
+            background: #4ade80;
+        }
+        .clear-btn {
+            background: #0f3460;
+            color: #e2e8f0;
+        }
+        .clear-btn:hover {
+            background: #1a1a2e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Text Receiver</h1>
+        <div class="status" id="status">Server running - waiting for text...</div>
+        <textarea id="textArea" placeholder="Received text will appear here..."></textarea>
+        <div class="buttons">
+            <button class="copy-btn" onclick="copyToClipboard()">Copy to Clipboard</button>
+            <button class="clear-btn" onclick="clearText()">Clear</button>
+        </div>
+    </div>
+
+    <script>
+        const textArea = document.getElementById('textArea');
+        const status = document.getElementById('status');
+
+        function copyToClipboard() {
+            textArea.select();
+            navigator.clipboard.writeText(textArea.value).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = 'Copy to Clipboard';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function clearText() {
+            textArea.value = '';
+            status.textContent = 'Cleared';
+            status.classList.remove('received');
+        }
+
+        // Poll for new text every 500ms
+        async function checkForText() {
+            try {
+                const response = await fetch('/text');
+                const data = await response.json();
+                if (data.text && data.text !== textArea.value) {
+                    textArea.value = data.text;
+                    status.textContent = `Text received (${data.text.length} chars)`;
+                    status.classList.add('received');
+                }
+            } catch (e) {}
+            setTimeout(checkForText, 500);
+        }
+
+        checkForText();
+    </script>
+</body>
+</html>
+"""
 
 
-class TextReceiverApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Text Receiver")
-        self.root.geometry("500x300")
-
-        # Label
-        self.label = tk.Label(root, text="Received text:", font=("Arial", 10))
-        self.label.pack(pady=5)
-
-        # Text area with scrollbar
-        self.text_area = scrolledtext.ScrolledText(
-            root,
-            wrap=tk.WORD,
-            width=60,
-            height=12,
-            font=("Arial", 11)
-        )
-        self.text_area.pack(padx=10, pady=5, expand=True, fill='both')
-
-        # Copy button
-        self.copy_button = tk.Button(
-            root,
-            text="Copy to Clipboard",
-            command=self.copy_to_clipboard,
-            font=("Arial", 10)
-        )
-        self.copy_button.pack(pady=5)
-
-        # Clear button
-        self.clear_button = tk.Button(
-            root,
-            text="Clear",
-            command=self.clear_text,
-            font=("Arial", 10)
-        )
-        self.clear_button.pack(pady=5)
-
-        # Status bar
-        self.status_var = tk.StringVar()
-        self.status_var.set("Server running on http://localhost:5000")
-        self.status_bar = tk.Label(
-            root,
-            textvariable=self.status_var,
-            relief=tk.SUNKEN,
-            anchor=tk.W
-        )
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-
-    def set_text(self, text):
-        """Set text in the text area"""
-        self.text_area.delete(1.0, tk.END)
-        self.text_area.insert(tk.END, text)
-        self.status_var.set(f"Text received ({len(text)} chars)")
-
-    def append_text(self, text):
-        """Append text to the existing text"""
-        self.text_area.insert(tk.END, text)
-        self.status_var.set(f"Text appended ({len(text)} chars)")
-
-    def copy_to_clipboard(self):
-        """Copy selected text or all text to clipboard"""
-        text = self.text_area.get(tk.SEL_FIRST, tk.SEL_LAST) if self.text_area.tag_ranges(tk.SEL) else self.text_area.get(1.0, tk.END)
-        self.root.clipboard_clear()
-        self.root.clipboard_append(text.strip())
-        self.status_var.set("Copied to clipboard")
-
-    def clear_text(self):
-        """Clear the text area"""
-        self.text_area.delete(1.0, tk.END)
-        self.status_var.set("Cleared")
+@app.route('/')
+def index():
+    """Serve the web interface"""
+    return render_template_string(HTML_TEMPLATE)
 
 
 @app.route('/text', methods=['POST'])
 def receive_text():
     """Endpoint to receive text via HTTP POST"""
-    global text_queue
+    global current_text
 
     data = request.get_json()
 
@@ -103,7 +171,10 @@ def receive_text():
     text = data['text']
     mode = data.get('mode', 'set')  # 'set' to replace, 'append' to add
 
-    text_queue.put(('set', text) if mode == 'set' else ('append', text))
+    if mode == 'set':
+        current_text = text
+    else:
+        current_text += text
 
     return jsonify({'status': 'success', 'length': len(text)}), 200
 
@@ -111,44 +182,13 @@ def receive_text():
 @app.route('/text', methods=['GET'])
 def get_text():
     """Endpoint to get current text via HTTP GET"""
-    return jsonify({'text': 'Use GUI to view text'}), 200
-
-
-def run_flask():
-    """Run Flask server using waitress (no X11 conflicts)"""
-    from waitress import serve
-    serve(app, host='0.0.0.0', port=5000, threads=1)
-
-
-def check_queue(gui_app):
-    """Check for incoming text and update GUI"""
-    try:
-        while True:
-            mode, text = text_queue.get_nowait()
-            if mode == 'set':
-                gui_app.set_text(text)
-            else:
-                gui_app.append_text(text)
-    except:
-        pass
-    finally:
-        # Check again after 100ms
-        gui_app.root.after(100, lambda: check_queue(gui_app))
+    return jsonify({'text': current_text}), 200
 
 
 def main():
-    # Start Flask server in a separate thread (daemon, so it exits when main exits)
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-
-    # Configure and show the pre-initialized root
-    root.deiconify()  # Show the window
-    gui_app = TextReceiverApp(root)
-
-    # Start checking queue
-    root.after(100, lambda: check_queue(gui_app))
-
-    root.mainloop()
+    from waitress import serve
+    print("Server running on http://localhost:5000")
+    serve(app, host='0.0.0.0', port=5000)
 
 
 if __name__ == "__main__":
